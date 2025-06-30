@@ -185,39 +185,6 @@ async fn generate_keypair() -> impl Responder {
 }
 
 
-async fn get_balance_json(payload: web::Json<BalanceRequest>) -> impl Responder {
-    let client = Client::new();
-    let solana_rpc = "https://api.devnet.solana.com";
-
-    let body = serde_json::json!({
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "getBalance",
-        "params": [payload.address]
-    });
-
-    let res = match client.post(solana_rpc).json(&body).send().await {
-        Ok(r) => r,
-        Err(_) => return HttpResponse::InternalServerError().body("Failed to call Solana RPC"),
-    };
-
-    let json: serde_json::Value = match res.json().await {
-        Ok(j) => j,
-        Err(_) => return HttpResponse::InternalServerError().body("Invalid JSON response"),
-    };
-
-    let lamports = json["result"]["value"].as_u64().unwrap_or(0);
-    let sol = lamports as f64 / 1_000_000_000.0;
-
-    HttpResponse::Ok().json(BalanceResponse {
-        address: payload.address.clone(),
-        lamports,
-        sol,
-    })
-}
-
-
-
 async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Responder {
     let req = payload.into_inner();
     
@@ -529,7 +496,6 @@ async fn main() -> std::io::Result<()> {
             // .app_data(app_state.clone())
             .wrap(cors)
             .route("/", web::get().to(get_hello_world))
-            .route("/balance", web::post().to(get_balance_json))
             .route("/send/sol", web::post().to(create_sol_transfer))
             .route("/send/token", web::post().to(create_token_transfer))
             .route("/keypair", web::post().to(generate_keypair))
