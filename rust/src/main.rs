@@ -74,7 +74,7 @@ struct BalanceResponse {
 
 #[derive(Deserialize)]
 struct TokenCreateRequest {
-    mint_authority: String,
+    mintAuthority: String,
     mint: String,
     decimals: u8,
 }
@@ -167,7 +167,7 @@ struct TokenTransferRequest {
 #[derive(Serialize)]
 struct TokenTransferAccountMeta {
     pubkey: String,
-    is_signer: bool,
+    isSigner: bool,
 }
 
 #[derive(Serialize)]
@@ -230,7 +230,7 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
     }
 
     let result = web::block(move || {
-        let mint_authority_pubkey = req.mint_authority.parse().map_err(|_| "Invalid mint authority pubkey")?;
+        let mint_authority_pubkey = req.mintAuthority.parse().map_err(|_| "Invalid mint authority pubkey")?;
         let mint_pubkey = req.mint.parse().map_err(|_| "Invalid mint pubkey")?;
         let decimals = req.decimals;
 
@@ -438,7 +438,7 @@ async fn create_token_transfer(payload: web::Json<TokenTransferRequest>) -> impl
 
         let accounts: Vec<TokenTransferAccountMeta> = ix.accounts.iter().map(|meta| TokenTransferAccountMeta {
             pubkey: meta.pubkey.to_string(),
-            is_signer: meta.is_signer,
+            isSigner: meta.is_signer,
         }).collect();
 
         Ok::<TokenTransferResponse, String>(TokenTransferResponse {
