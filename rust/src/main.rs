@@ -16,7 +16,7 @@ use ed25519_dalek::{
     PublicKey as DalekPublicKey,
     Signature as DalekSignature,
 };
-use std::env;
+
 use dotenv;
 use reqwest::Client;
 use solana_sdk::bs58;
