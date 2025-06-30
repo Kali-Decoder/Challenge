@@ -929,6 +929,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "challenge"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-web",
+ "base64 0.21.7",
+ "chrono",
+ "dotenv",
+ "ed25519-dalek",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "solana-client",
+ "solana-sdk",
+ "spl-token",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "chrono"
 version = "0.4.41"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1395,6 +1415,12 @@ dependencies = [
  "quote",
  "syn 2.0.104",
 ]
+
+[[package]]
+name = "dotenv"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77c90badedccf4105eca100756a0b1289e191f6fcbdadd3cee1d2f614f97da8f"
 
 [[package]]
 name = "eager"
@@ -4799,22 +4825,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "todo-backend"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-web",
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "solana-client",
- "solana-sdk",
- "tokio",
- "uuid",
-]
 
 [[package]]
 name = "tokio"
