@@ -1,13 +1,9 @@
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use actix_cors::Cors;
 use serde::{Deserialize, Serialize};
-use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    pubkey::Pubkey,
     signature::{Keypair, Signer},
-    system_instruction,
-    transaction::Transaction,
-    native_token::sol_to_lamports,
+    system_instruction
 };
 use spl_token::instruction as token_instruction;
 use base64::Engine as _;
@@ -23,8 +19,6 @@ use std::env;
 use dotenv;
 use reqwest::Client;
 use solana_sdk::bs58;
-use solana_sdk::instruction::Instruction;
-use solana_sdk::program_pack::Pack;
 
 #[derive(Serialize)]
 #[serde(untagged)]
@@ -49,12 +43,10 @@ impl<T: Serialize> ApiResponse<T> {
     }
 }
 
-// Helper function for consistent error responses
 fn error_response<T: Serialize>(message: &str) -> HttpResponse {
     HttpResponse::BadRequest().json(ApiResponse::<T>::err(message))
 }
 
-// Helper function for success responses
 fn success_response<T: Serialize>(data: T) -> HttpResponse {
     HttpResponse::Ok().json(ApiResponse::ok(data))
 }
@@ -70,12 +62,6 @@ struct BalanceRequest {
     address: String,
 }
 
-#[derive(Deserialize)]
-pub struct TransferRequest {
-    from_secret_key: String,
-    to_address: String,
-    amount_sol: f64,
-}
 
 #[derive(Serialize)]
 struct BalanceResponse {
@@ -155,21 +141,9 @@ struct MessageVerifyResponse {
     pubkey: String,
 }
 
-#[derive(Deserialize)]
-struct TokenSendRequest {
-    token_mint: String,
-    from_token_account: String,
-    to_token_account: String,
-    owner: String,
-    amount: u64,
-}
 
-#[derive(Serialize)]
-struct TokenSendResponse {
-    program_id: String,
-    accounts: Vec<TokenCreateAccountMeta>,
-    instruction_data: String,
-}
+
+
 
 #[derive(Deserialize)]
 struct SolTransferRequest {
@@ -247,19 +221,19 @@ async fn get_balance_json(payload: web::Json<BalanceRequest>) -> impl Responder 
 async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Responder {
     let req = payload.into_inner();
     
-    // Validate required fields
+
     if req.decimals > 9 {
         return error_response::<TokenCreateResponse>("Decimals must be between 0 and 9");
     }
 
     let result = web::block(move || {
-        use solana_sdk::system_program;
+    
         use solana_sdk::system_instruction;
-        use solana_sdk::rent::Rent;
+  
         use solana_sdk::signer::Signer;
         use solana_sdk::transaction::Transaction;
         use solana_sdk::commitment_config::CommitmentConfig;
-        use solana_sdk::pubkey::Pubkey;
+
         use solana_client::rpc_client::RpcClient;
         use spl_token::state::Mint;
         use solana_sdk::program_pack::Pack;
@@ -270,7 +244,7 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
         let mint_authority_pubkey = req.mint_authority.parse().map_err(|_| "Invalid mint authority pubkey")?;
         let decimals = req.decimals;
 
-        // Load payer/authority from env
+  
         let payer_secret = get_mint_authority_secret().ok_or("Missing SOLANA_MINT_AUTHORITY_SECRET in .env")?;
         let payer_bytes = bs58::decode(payer_secret).into_vec().map_err(|_| "Invalid base58 secret in .env")?;
         let payer = Keypair::from_bytes(&payer_bytes).map_err(|_| "Invalid secret key bytes in .env")?;
@@ -278,11 +252,11 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
         let rpc_url = "https://api.devnet.solana.com";
         let client = RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
 
-        // Calculate rent-exempt minimum for mint
+
         let mint_rent = client.get_minimum_balance_for_rent_exemption(Mint::LEN)
             .map_err(|e| format!("Failed to get rent-exempt minimum: {e}"))?;
 
-        // Create mint account instruction
+
         let create_account_ix = system_instruction::create_account(
             &payer.pubkey(),
             &mint_pubkey,
@@ -291,7 +265,7 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
             &spl_token::id(),
         );
 
-        // Initialize mint instruction
+
         let init_mint_ix = token_instruction::initialize_mint(
             &spl_token::id(),
             &mint_pubkey,
@@ -300,11 +274,11 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
             decimals,
         ).map_err(|e| format!("Failed to create instruction: {e}"))?;
 
-        // Get recent blockhash
+
         let blockhash = client.get_latest_blockhash()
             .map_err(|e| format!("Failed to get blockhash: {e}"))?;
 
-        // Build and sign transaction
+
         let tx = Transaction::new_signed_with_payer(
             &[create_account_ix, init_mint_ix.clone()],
             Some(&payer.pubkey()),
@@ -312,7 +286,7 @@ async fn create_token_mint(payload: web::Json<TokenCreateRequest>) -> impl Respo
             blockhash,
         );
 
-        // Send transaction
+  
         let sig = client.send_and_confirm_transaction(&tx)
             .map_err(|e| format!("Transaction failed: {e}"))?;
 
@@ -347,12 +321,12 @@ async fn mint_tokens(payload: web::Json<TokenMintRequest>) -> impl Responder {
         let dest_pubkey = req.destination.parse().map_err(|_| "Invalid destination pubkey")?;
         let amount = req.amount;
 
-        // Load authority from env
+
         let authority_secret = get_mint_authority_secret().ok_or("Missing SOLANA_MINT_AUTHORITY_SECRET in .env")?;
         let authority_bytes = bs58::decode(authority_secret).into_vec().map_err(|_| "Invalid base58 secret in .env")?;
         let authority = Keypair::from_bytes(&authority_bytes).map_err(|_| "Invalid secret key bytes in .env")?;
 
-        // Build mint_to instruction
+ 
         let ix = token_instruction::mint_to(
             &spl_token::id(),
             &mint_pubkey,
@@ -382,48 +356,6 @@ async fn mint_tokens(payload: web::Json<TokenMintRequest>) -> impl Responder {
     }
 }
 
-async fn send_token(payload: web::Json<TokenSendRequest>) -> impl Responder {
-    let req = payload.into_inner();
-    let result = web::block(move || {
-        use spl_token::instruction as token_instruction;
-        use solana_sdk::pubkey::Pubkey;
-
-        let mint_pubkey = req.token_mint.parse::<Pubkey>().map_err(|_| "Invalid mint pubkey")?;
-        let from_account = req.from_token_account.parse::<Pubkey>().map_err(|_| "Invalid source token account")?;
-        let to_account = req.to_token_account.parse::<Pubkey>().map_err(|_| "Invalid destination token account")?;
-        let owner = req.owner.parse::<Pubkey>().map_err(|_| "Invalid owner pubkey")?;
-        let amount = req.amount;
-
-        // Build transfer instruction
-        let ix = token_instruction::transfer(
-            &spl_token::id(),
-            &from_account,
-            &to_account,
-            &owner,
-            &[],
-            amount,
-        ).map_err(|e| format!("Failed to create instruction: {e}"))?;
-
-        let accounts: Vec<TokenCreateAccountMeta> = ix.accounts.iter().map(|meta| TokenCreateAccountMeta {
-            pubkey: meta.pubkey.to_string(),
-            is_signer: meta.is_signer,
-            is_writable: meta.is_writable,
-        }).collect();
-
-        let instruction_data = BASE64.encode(&ix.data);
-
-        Ok::<TokenSendResponse, String>(TokenSendResponse {
-            program_id: ix.program_id.to_string(),
-            accounts,
-            instruction_data,
-        })
-    }).await;
-
-    match result {
-        Ok(response) => success_response(response),
-        Err(e) => error_response::<TokenSendResponse>(&e.to_string()),
-    }
-}
 
 async fn sign_message(payload: web::Json<MessageSignRequest>) -> impl Responder {
     let req = payload.into_inner();
@@ -577,9 +509,6 @@ fn load_env() {
     dotenv::dotenv().ok();
 }
 
-fn get_mint_authority_pubkey() -> Option<String> {
-    env::var("SOLANA_MINT_AUTHORITY_PUBKEY").ok()
-}
 
 fn get_mint_authority_secret() -> Option<String> {
     env::var("SOLANA_MINT_AUTHORITY_SECRET").ok()
